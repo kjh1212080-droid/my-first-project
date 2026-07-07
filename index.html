@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>안전관리실 통합 대시보드 및 스마트 검색 시스템</title>
+    <title>안전관리실 전사 통합 스마트 검색 시스템</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -10,7 +10,7 @@
         h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 12px; margin-bottom: 25px; font-size: 26px; }
         
         /* 🔍 통합 검색 바 스타일 */
-        .search-box { display: flex; gap: 10px; margin-bottom: 25px; background: #0d6efd; padding: 18px; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .search-box { display: flex; gap: 10px; margin-bottom: 25px; background: #0d6efd; padding: 18px; border-radius: 8px; }
         select, input, button { padding: 12px; font-size: 15px; border: 1px solid #ced4da; border-radius: 6px; }
         input { flex: 1; min-width: 250px; }
         button { background-color: #212529; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
@@ -35,7 +35,7 @@
         table.data-table th { background-color: #f1f3f5; color: #495057; font-weight: bold; }
         table.data-table tr:hover { background-color: #f8f9fa; }
         
-        /* 부서 뱃지 */
+        /* 부서 뱃지 색상 */
         .badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
         .bg-safety { background-color: #6f42c1; } 
         .bg-west { background-color: #fd7e14; }   
@@ -62,7 +62,7 @@
             <option value="서부안전팀">서부안전팀</option>
             <option value="북부안전팀">북부안전팀</option>
         </select>
-        <input type="text" id="searchInput" placeholder="원하는 키워드를 검색하세요. (힌트: '북부안전팀 차량 대수'를 입력해 보세요!)">
+        <input type="text" id="searchInput" placeholder="검색어를 입력하세요. (예: 안전관리실 교육, 서부안전팀, 북부안전팀 차량 대수 등)">
         <button onclick="searchData()">🔍 통합 검색 및 분석</button>
     </div>
 
@@ -71,20 +71,14 @@
         <div class="stats-grid">
             <div class="stats-table-box">
                 <table class="mini-table">
-                    <thead>
-                        <tr>
-                            <th>구분 (차량종류)</th>
-                            <th>운행 용도</th>
-                            <th>차량 대수</th>
-                            <th>해당 차량 번호 예시</th>
-                        </tr>
-                    </thead>
+                    <thead id="statsTableHead">
+                        </thead>
                     <tbody id="statsTableBody">
                         </tbody>
                 </table>
             </div>
             <div class="stats-chart-box">
-                <canvas id="vehicleChart"></canvas>
+                <canvas id="analyticsChart"></canvas>
             </div>
         </div>
     </div>
@@ -94,7 +88,7 @@
             <tr>
                 <th style="width: 15%;">담당 부서</th>
                 <th style="width: 30%;">자료 및 현황 항목명</th>
-                <th style="width: 42%;">상세 내용 설명</th>
+                <th style="width: 42%;">상세 내용 설명 (동일 PDF 내 해당 챕터 포함)</th>
                 <th style="width: 13%;">자료 보기</th>
             </tr>
         </thead>
@@ -109,149 +103,44 @@
 </div>
 
 <script>
-    // 시스템 메인 데이터베이스
+    // 💡 전체 PDF 하나에 포함된 전사 부서별 데이터베이스 정의
     const safetyDatabase = [
-        { dept: "안전관리실", title: "2026년 안전관리실 현황", content: "안전관리실의 종합 현황 및 마스터 플랜을 볼 수 있는 핵심 자료입니다.", fileName: "safety_guide.pdf" },
-        { dept: "서부안전팀", title: "정압기 교육 PPT 자료", content: "현장 작업자 필수 이수 기술 매뉴얼 및 안전 작동 슬라이드", fileName: "prod_safety.pdf" },
-        { dept: "북부안전팀", title: "아차사고/사고 가이드라인", content: "북부안전팀 관할 지역 내 사고 발생 시 대처 가이드 라인 제시 자료", fileName: "space_guide.pdf" },
-        { dept: "북부안전팀", title: "북부안전팀 업무용 차량 현황 보고서", content: "북부안전팀 일상점검 차량 총 10대에 대한 차종 및 차량번호 세부 통계 리포트 데이터 포함 문서.", fileName: "safety_guide.pdf" }
+        { dept: "안전관리실", title: "2026년 정기 안전보건교육 자료", content: "안전관리실 소관 - 전 직원 대상 정기 교육 자료 및 파트별 이수율 통계 현황 (PDF 1부 수록)", fileName: "safety_guide.pdf" },
+        { dept: "서부안전팀", title: "서부 관할 정압기 현장 교육 및 장비 현황", content: "서부안전팀 소관 - 현장 필수 기술 매뉴얼 및 정압기실 장비 보유 통계 (PDF 1부 수록)", fileName: "safety_guide.pdf" },
+        { dept: "북부안전팀", title: "북부안전팀 업무용 차량 현황 보고서", content: "북부안전팀 소관 - 일상점검 차량 총 10대에 대한 차종 및 차량번호 세부 명세 (PDF 1부 수록)", fileName: "safety_guide.pdf" }
     ];
 
-    // 📋 PDF 내부 표 데이터를 기반으로 설계된 차량 원본 통계 데이터
-    const vehicleData = {
-        title: "🚖 북부안전팀 업무용 차량 실시간 데이터 분석",
-        total: 10,
-        details: [
-            { type: "코나", use: "일상점검", count: 5, numExample: "178나7958, 296오7056 등" },
-            { type: "코나 하이브리드", use: "일상점검", count: 3, numExample: "281고3858, 281고3882 등" },
-            { type: "아반떼", use: "일상점검", count: 2, numExample: "22부5910, 399더6410" }
-        ],
-        labels: ['코나', '코나 하이브리드', '아반떼'],
-        counts: [5, 3, 2],
-        colors: ['#0dcaf0', '#0d6efd', '#6c757d']
-    };
-
-    let chartInstance = null;
-
-    function getDeptBadgeClass(dept) {
-        if (dept === "안전관리실") return "bg-safety";
-        if (dept === "서부안전팀") return "bg-west";
-        if (dept === "북부안전팀") return "bg-north";
-        return "bg-secondary";
-    }
-
-    // 일반 테이블 출력 함수
-    function displayData(dataList) {
-        const tableBody = document.getElementById("dataTableBody");
-        tableBody.innerHTML = "";
-        
-        if(dataList.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999; padding:40px;">🔍 일치하는 결과가 없습니다. 다른 단어를 검색해 보세요.</td></tr>`;
-            return;
-        }
-
-        dataList.forEach(item => {
-            const badgeClass = getDeptBadgeClass(item.dept);
-            const row = `<tr>
-                <td><span class="badge ${badgeClass}">${item.dept}</span></td>
-                <td><strong>${item.title}</strong></td>
-                <td>${item.content}</td>
-                <td><button class="view-btn" onclick="openPdf('${item.fileName}', '${item.title}')">문서 열기 👁️</button></td>
-            </tr>`;
-            tableBody.innerHTML += row;
-        });
-    }
-
-    // 🔍 스마트 검색 및 실시간 통계 생성 엔진
-    function searchData() {
-        const selectedDept = document.getElementById("deptSelect").value;
-        const searchKeyword = document.getElementById("searchInput").value.toLowerCase().trim();
-        
-        const reportContainer = document.getElementById("statsReportContainer");
-
-        // 🎯 핵심 로직: 사용자가 '북부'와 '차량' 또는 '대수', '종류'를 검색창에 융합하여 입력했는지 판단
-        const isVehicleSearch = (searchKeyword.includes("북부") && searchKeyword.includes("차량")) || 
-                                searchKeyword.includes("차량 대수") || 
-                                searchKeyword.includes("차량 대수") || 
-                                searchKeyword.includes("차종");
-
-        if (isVehicleSearch) {
-            // 1. 스마트 통계창 활성화 및 정보 입력
-            reportContainer.style.display = "block";
-            document.getElementById("statsTitle").innerText = vehicleData.title;
-            
-            const statsTableBody = document.getElementById("statsTableBody");
-            statsTableBody.innerHTML = "";
-            
-            vehicleData.details.forEach(item => {
-                statsTableBody.innerHTML += `<tr>
-                    <td>${item.type}</td>
-                    <td>${item.use}</td>
-                    <td>${item.count}대</td>
-                    <td style="text-align:left; padding-left:15px; color:#666;">${item.numExample}</td>
-                </tr>`;
-            });
-            // 총계 행 추가
-            statsTableBody.innerHTML += `<tr class="highlight-tr">
-                <td>총 계</td>
-                <td>일상점검 총합</td>
-                <td>${vehicleData.total}대</td>
-                <td>북부안전팀 차량 운행 100% 정상 작동 중</td>
-            </tr>`;
-
-            // 2. 우측 도넛 모양 통계 차트 동적 렌더링
-            const ctx = document.getElementById('vehicleChart').getContext('2d');
-            if (chartInstance) { chartInstance.destroy(); } // 기존 차트 초기화
-            
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: vehicleData.labels,
-                    datasets: [{
-                        data: vehicleData.counts,
-                        backgroundColor: vehicleData.colors,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right' }
-                    }
-                }
-            });
-        } else {
-            // 차량 검색이 아닐 경우 통계창 숨김
-            reportContainer.style.display = "none";
-        }
-
-        // 아래쪽 일반 자료 목록 필터링 기능 처리
-        const filteredData = safetyDatabase.filter(item => {
-            const matchDept = (selectedDept === "all" || item.dept === selectedDept);
-            const matchKeyword = item.dept.toLowerCase().includes(searchKeyword) || 
-                                 item.title.toLowerCase().includes(searchKeyword) || 
-                                 item.content.toLowerCase().includes(searchKeyword);
-            return matchDept && matchKeyword;
-        });
-
-        displayData(filteredData);
-    }
-
-    function openPdf(fileName, title) {
-        const container = document.getElementById("pdfViewerContainer");
-        const frame = document.getElementById("pdfFrame");
-        const titleTarget = document.getElementById("pdfTitle");
-
-        titleTarget.innerText = `📄 문서 열기: ${title}`;
-        frame.src = fileName;
-        container.style.display = "block";
-        container.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    // 최초 로드
-    displayData(safetyDatabase);
-</script>
-
-</body>
-</html>
+    // 📊 PDF 내의 데이터를 완벽 가공한 팀별 통계 데이터 저장소
+    const teamAnalyticsData = {
+        "안전관리실": {
+            title: "🎯 [안전관리실] 2026년 정기 안전보건교육 이수 현황 분석",
+            headers: ["구분", "대상 인원", "이수 인원", "미이수 인원"],
+            rows: [
+                ["정기 보건교육", "150명", "142명", "8명"],
+                ["관리감독자 교육", "30명", "30명", "0명"]
+            ],
+            totalRow: ["총 계", "180명", "172명", "8명 (이수율 95.5%)"],
+            chartType: "bar",
+            labels: ["이수 완료", "미이수"],
+            counts: [172, 8],
+            colors: ["#6f42c1", "#dc3545"]
+        },
+        "서부안전팀": {
+            title: "⚙️ [서부안전팀] 정압기실 장비 점검 및 인프라 보유 현황",
+            headers: ["점검 대상 시설", "관리 등급", "보유 대수", "상태 요약"],
+            rows: [
+                ["A구역 정압기", "가 등급", "4대", "정상 가동 중"],
+                ["B구역 정압기", "나 등급", "3대", "1대 교체 예정"]
+            ],
+            totalRow: ["총 계", "정합기 총합", "7대", "안전 점검 100% 완료"],
+            chartType: "pie",
+            labels: ["A구역 정압기", "B구역 정압기"],
+            counts: [4, 3],
+            colors: ["#fd7e14", "#ffc107"]
+        },
+        "북부안전팀": {
+            title: "🚖 [북부안전팀] 업무용 차량 대수 및 차종 분포 분석",
+            headers: ["차량 종류", "운행 구분", "보유 대수", "차량 번호 예시"],
+            rows: [
+                ["코나", "일상점검", "5대", "178나7958, 296오7056 등"],
+                ["코나 하이브리드", "일상점검", "3대", "281고3858, 281고3882 등"],
