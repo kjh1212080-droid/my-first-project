@@ -35,11 +35,13 @@
         table.data-table th { background-color: #f1f3f5; color: #495057; font-weight: bold; }
         table.data-table tr:hover { background-color: #f8f9fa; }
         
-        /* 부서 뱃지 색상 */
+        /* 부서 뱃지 색상 정의 */
         .badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
-        .bg-safety { background-color: #6f42c1; } 
-        .bg-west { background-color: #fd7e14; }   
-        .bg-north { background-color: #0dcaf0; color: #212529; }  
+        .bg-team1 { background-color: #20c997; } /* 경산 */
+        .bg-team2 { background-color: #fd7e14; } /* 서부 */
+        .bg-team3 { background-color: #0dcaf0; color: #212529; } /* 북부 */
+        .bg-team4 { background-color: #0d6efd; } /* 수성 */
+        .bg-team5 { background-color: #6f42c1; } /* 배관진단 */
         
         .view-btn { background-color: #198754; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
         .view-btn:hover { background-color: #157347; }
@@ -57,12 +59,14 @@
     
     <div class="search-box">
         <select id="deptSelect">
-            <option value="all">전체 부서 카테고리</option>
-            <option value="안전관리실">안전관리실</option>
+            <option value="all">전체 팀 카테고리</option>
+            <option value="경산안전팀">경산안전팀</option>
             <option value="서부안전팀">서부안전팀</option>
             <option value="북부안전팀">북부안전팀</option>
+            <option value="수성안전팀">수성안전팀</option>
+            <option value="배관진단팀">배관진단팀</option>
         </select>
-        <input type="text" id="searchInput" placeholder="검색어를 입력하세요. (예: 안전관리실 교육, 서부안전팀, 북부안전팀 차량 대수 등)">
+        <input type="text" id="searchInput" placeholder="검색어를 입력하세요. (예: 북부안전팀 차량, 서부안전팀 정압기 등)">
         <button onclick="searchData()">🔍 통합 검색 및 분석</button>
     </div>
 
@@ -88,7 +92,7 @@
             <tr>
                 <th style="width: 15%;">담당 부서</th>
                 <th style="width: 30%;">자료 및 현황 항목명</th>
-                <th style="width: 42%;">상세 내용 설명 (동일 PDF 내 해당 챕터 포함)</th>
+                <th style="width: 42%;">상세 내용 설명 (통합 PDF 가이드 수록)</th>
                 <th style="width: 13%;">자료 보기</th>
             </tr>
         </thead>
@@ -103,43 +107,47 @@
 </div>
 
 <script>
-    // 💡 전체 PDF 하나에 포함된 전사 부서별 데이터베이스 정의
+    // 💡 [실제 데이터 기입처 1] 5개 팀의 기본 리스트 데이터 정의
+    // ✏️ 아래 content 내용을 실제 PDF에 맞게 수정해 주시면 사이트에 그대로 반영됩니다!
     const safetyDatabase = [
-        { dept: "안전관리실", title: "2026년 정기 안전보건교육 자료", content: "안전관리실 소관 - 전 직원 대상 정기 교육 자료 및 파트별 이수율 통계 현황 (통합 PDF 문서 내 수록)", fileName: "safety_guide.pdf" },
-        { dept: "서부안전팀", title: "서부 관할 정압기 현장 교육 및 장비 현황", content: "서부안전팀 소관 - 현장 필수 기술 매뉴얼 및 정압기실 장비 보유 통계 (통합 PDF 문서 내 수록)", fileName: "safety_guide.pdf" },
-        { dept: "북부안전팀", title: "북부안전팀 업무용 차량 현황 보고서", content: "북부안전팀 소관 - 일상점검 차량 총 10대에 대한 차종 및 차량번호 세부 명세 (통합 PDF 문서 내 수록)", fileName: "safety_guide.pdf" }
+        { dept: "경산안전팀", title: "경산안전팀 관할 시설 및 장비 현황", content: "통합 가이드 문서 수록 - 경산 지역 일상점검 및 정압기 관리 현황 데이터", fileName: "safety_guide.pdf" },
+        { dept: "서부안전팀", title: "서부안전팀 시설 및 정압기 점검 내역", content: "통합 가이드 문서 수록 - 서부 관할 다수의 정압기 인프라 현황 데이터", fileName: "safety_guide.pdf" },
+        { dept: "북부안전팀", title: "북부안전팀 업무용 차량 및 시설 현황 보고서", content: "통합 가이드 문서 수록 - 일상점검 차량 총 10대에 대한 세부 통계 리포트", fileName: "safety_guide.pdf" },
+        { dept: "수성안전팀", title: "수성안전팀 안전관리 지표 및 장비 명세", content: "통합 가이드 문서 수록 - 수성구 관할 공급 시설 및 인프라 통계 현황", fileName: "safety_guide.pdf" },
+        { dept: "배관진단팀", title: "배관진단팀 정밀 진단 장비 및 실적 현황", content: "통합 가이드 문서 수록 - 주요 고압/중압 배관 진단 실적 및 보유 장비 분석", fileName: "safety_guide.pdf" }
     ];
 
-    // 📊 PDF 내의 데이터를 완벽 가공한 팀별 통계 데이터 저장소
+    // 📊 [실제 데이터 기입처 2] 검색창에 입력 시 튀어나올 '진짜 통계 수치'를 적는 곳입니다.
+    // ✏️ PDF 파일 열어두시고 아래 숫자(count)와 상세행(rows)의 텍스트들을 실제 수치로 변경해 주세요!
     const teamAnalyticsData = {
-        "안전관리실": {
-            title: "🎯 [안전관리실] 2026년 정기 안전보건교육 이수 현황 분석",
-            headers: ["구분", "대상 인원", "이수 인원", "미이수 인원"],
+        "경산안전팀": {
+            title: "⚙️ [경산안전팀] 실시간 시설 관리 통계 분석",
+            headers: ["구분 항목", "상세 설명", "수량", "비고"],
             rows: [
-                ["정기 보건교육", "150명", "142명", "8명"],
-                ["관리감독자 교육", "30명", "30명", "0명"]
+                ["정압기", "경산 관할 구역", "15개소", "정상 작동"], // ✏️ 실제 숫자로 변경 가능
+                ["기타 장비", "안전 장비", "20대", "이상 없음"]
             ],
-            totalRow: ["총 계", "180명", "172명", "8명 (이수율 95.5%)"],
-            chartType: "bar",
-            labels: ["이수 완료", "미이수"],
-            counts: [172, 8],
-            colors: ["#6f42c1", "#dc3545"]
+            totalRow: ["총 계", "종합 인프라", "35개", "안전점검 완료"],
+            chartType: "pie",
+            labels: ["정압기", "기타 장비"],
+            counts: [15, 20], // ✏️ 차트에 그려질 실제 숫자
+            colors: ["#20c997", "#6c757d"]
         },
         "서부안전팀": {
-            title: "⚙️ [서부안전팀] 정압기실 장비 점검 및 인프라 보유 현황",
-            headers: ["점검 대상 시설", "관리 등급", "보유 대수", "상태 요약"],
+            title: "⚙️ [서부안전팀] 관할 대규모 정압기 인프라 통계 분석",
+            headers: ["점검 대상 정압기", "관리 등급", "보유 대수", "상태 요약"],
             rows: [
-                ["A구역 정압기", "가 등급", "4대", "정상 가동 중"],
-                ["B구역 정압기", "나 등급", "3대", "1대 교체 예정"]
+                ["A타입 정압기", "주요 간선 지역", "45대", "정상 가동 중"], // ✏️ 실제 수치로 변경
+                ["B타입 정압기", "일반 공급 구역", "32대", "정기 점검중"]
             ],
-            totalRow: ["총 계", "정합기 총합", "7대", "안전 점검 100% 완료"],
-            chartType: "pie",
-            labels: ["A구역 정압기", "B구역 정압기"],
-            counts: [4, 3],
+            totalRow: ["총 계", "정압기 시설 총합", "77대", "안전 최우수 등급 유지"],
+            chartType: "bar",
+            labels: ["A타입 정압기", "B타입 정압기"],
+            counts: [45, 32], // ✏️ 실제 수치로 변경
             colors: ["#fd7e14", "#ffc107"]
         },
         "북부안전팀": {
-            title: "🚖 [북부안전팀] 업무용 차량 대수 및 차종 분포 분석",
+            title: "🚖 [북부안전팀] 업무용 차량 대수 및 차종 분포 분석 (PDF 데이터)",
             headers: ["차량 종류", "운행 구분", "보유 대수", "차량 번호 예시"],
             rows: [
                 ["코나", "일상점검", "5대", "178나7958, 296오7056 등"],
@@ -151,25 +159,52 @@
             labels: ["코나", "코나 하이브리드", "아반떼"],
             counts: [5, 3, 2],
             colors: ["#0dcaf0", "#0d6efd", "#6c757d"]
+        },
+        "수성안전팀": {
+            title: "⚙️ [수성안전팀] 정압기 및 안전 관리 시설 분포",
+            headers: ["인프라 종류", "담당 구역", "보유 현황", "점검 주기"],
+            rows: [
+                ["지구 정압기", "수성구 일대", "28대", "매일 점검"], // ✏️ 실제 수치로 변경
+                ["지역 정압기", "아파트 및 주거단지", "54대", "주간 점검"]
+            ],
+            totalRow: ["총 계", "수성 관할 전체", "82대", "100% 정상 작동"],
+            chartType: "pie",
+            labels: ["지구 정압기", "지역 정압기"],
+            counts: [28, 54], // ✏️ 실제 수치로 변경
+            colors: ["#0d6efd", "#a3cfbb"]
+        },
+        "배관진단팀": {
+            title: "🔍 [배관진단팀] 배관 정밀 점검 및 진단 장비 현황",
+            headers: ["진단 장비명", "주요 용도", "보유 대수", "장비 상태"],
+            rows: [
+                ["피그(Piging) 장비", "배관 내부 검사", "3대", "최신형 보유"], // ✏️ 실제 수치로 변경
+                ["누출 탐지기", "가스 누출 정밀 진단", "12대", "교정 완료"]
+            ],
+            totalRow: ["총 계", "정밀 장비 총합", "15대", "가동률 100%"],
+            chartType: "bar",
+            labels: ["피그 장비", "누출 탐지기"],
+            counts: [3, 12], // ✏️ 실제 수치로 변경
+            colors: ["#6f42c1", "#e83e8c"]
         }
     };
 
     let chartInstance = null;
 
     function getDeptBadgeClass(dept) {
-        if (dept === "안전관리실") return "bg-safety";
-        if (dept === "서부안전팀") return "bg-west";
-        if (dept === "북부안전팀") return "bg-north";
+        if (dept === "경산안전팀") return "bg-team1";
+        if (dept === "서부안전팀") return "bg-team2";
+        if (dept === "북부안전팀") return "bg-team3";
+        if (dept === "수성안전팀") return "bg-team4";
+        if (dept === "배관진단팀") return "bg-team5";
         return "bg-secondary";
     }
 
-    // 📋 테이블에 데이터를 꽂아주는 핵심 함수
     function displayData(dataList) {
         const tableBody = document.getElementById("dataTableBody");
         tableBody.innerHTML = "";
         
         if (dataList.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999; padding:40px;">🔍 일치하는 자료가 없습니다.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999; padding:40px;">🔍 검색 조건과 일치하는 팀 자료 항목이 없습니다.</td></tr>`;
             return;
         }
 
@@ -184,7 +219,7 @@
         });
     }
 
-    // 🔍 통합 분석 검색 엔진
+    // 🔍 똑똑해진 다차원 검색 매칭 엔진 (버그 수정 완료)
     function searchData() {
         const selectedDept = document.getElementById("deptSelect").value;
         const searchKeyword = document.getElementById("searchInput").value.toLowerCase().trim();
@@ -192,16 +227,18 @@
 
         let activeTeam = null;
         
-        // 검색 키워드 매칭 판단
-        if (searchKeyword.includes("안전관리") || searchKeyword.includes("교육") || selectedDept === "안전관리실") {
-            activeTeam = "안전관리실";
-        } else if (searchKeyword.includes("서부") || searchKeyword.includes("정압") || selectedDept === "서부안전팀") {
-            activeTeam = "서부안전팀";
-        } else if (searchKeyword.includes("북부") || searchKeyword.includes("차량") || searchKeyword.includes("차") || selectedDept === "북부안전팀") {
-            activeTeam = "북부안전팀";
+        // 1. 선택 박스 선택 기준을 최우선으로 하되, 검색어 키워드와 정밀 매칭
+        if (selectedDept !== "all") {
+            activeTeam = selectedDept;
+        } else if (searchKeyword !== "") {
+            if (searchKeyword.includes("경산")) activeTeam = "경산안전팀";
+            else if (searchKeyword.includes("서부") || searchKeyword.includes("정압기")) activeTeam = "서부안전팀";
+            else if (searchKeyword.includes("북부") || searchKeyword.includes("차량") || searchKeyword.includes("차")) activeTeam = "북부안전팀";
+            else if (searchKeyword.includes("수성")) activeTeam = "수성안전팀";
+            else if (searchKeyword.includes("배관") || searchKeyword.includes("진단")) activeTeam = "배관진단팀";
         }
 
-        // 통계 리포트 화면 노출 및 차트 드로잉
+        // 2. 검색어가 비어있지 않고 올바른 팀이 감지되었을 때만 통계 그래프 활성화
         if (activeTeam && teamAnalyticsData[activeTeam] && searchKeyword !== "") {
             const tData = teamAnalyticsData[activeTeam];
             reportContainer.style.display = "block";
@@ -224,20 +261,23 @@
                     datasets: [{
                         data: tData.counts,
                         backgroundColor: tData.colors,
-                        label: '현황 데이터'
+                        label: '보유 수량'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: tData.chartType === 'bar' ? 'none' : 'right' } }
+                    plugins: { 
+                        legend: { position: tData.chartType === 'bar' ? 'none' : 'right' } 
+                    }
                 }
             });
         } else {
+            // 아무것도 안 쳤거나 매칭 안 되면 상단 통계 리포트 창 가림
             reportContainer.style.display = "none";
         }
 
-        // 아래쪽 일반 리스트 필터링
+        // 3. 하단 메인 리스트 테이블 필터링
         const filteredData = safetyDatabase.filter(item => {
             const matchDept = (selectedDept === "all" || item.dept === selectedDept);
             const matchKeyword = searchKeyword === "" || 
@@ -258,7 +298,7 @@
         container.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ✨ [핵심 조치] 사이트가 최초 로드될 때 리스트를 화면에 즉시 그려주는 트리거 실행
+    // 첫 실행 트리거
     window.onload = function() {
         displayData(safetyDatabase);
     };
