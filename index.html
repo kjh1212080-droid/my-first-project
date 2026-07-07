@@ -105,9 +105,9 @@
 <script>
     // 💡 전체 PDF 하나에 포함된 전사 부서별 데이터베이스 정의
     const safetyDatabase = [
-        { dept: "안전관리실", title: "2026년 정기 안전보건교육 자료", content: "안전관리실 소관 - 전 직원 대상 정기 교육 자료 및 파트별 이수율 통계 현황 (PDF 1부 수록)", fileName: "safety_guide.pdf" },
-        { dept: "서부안전팀", title: "서부 관할 정압기 현장 교육 및 장비 현황", content: "서부안전팀 소관 - 현장 필수 기술 매뉴얼 및 정압기실 장비 보유 통계 (PDF 1부 수록)", fileName: "safety_guide.pdf" },
-        { dept: "북부안전팀", title: "북부안전팀 업무용 차량 현황 보고서", content: "북부안전팀 소관 - 일상점검 차량 총 10대에 대한 차종 및 차량번호 세부 명세 (PDF 1부 수록)", fileName: "safety_guide.pdf" }
+        { dept: "안전관리실", title: "2026년 정기 안전보건교육 자료", content: "안전관리실 소관 - 전 직원 대상 정기 교육 자료 및 파트별 이수율 통계 현황 (통합 PDF 문서 내 수록)", fileName: "safety_guide.pdf" },
+        { dept: "서부안전팀", title: "서부 관할 정압기 현장 교육 및 장비 현황", content: "서부안전팀 소관 - 현장 필수 기술 매뉴얼 및 정압기실 장비 보유 통계 (통합 PDF 문서 내 수록)", fileName: "safety_guide.pdf" },
+        { dept: "북부안전팀", title: "북부안전팀 업무용 차량 현황 보고서", content: "북부안전팀 소관 - 일상점검 차량 총 10대에 대한 차종 및 차량번호 세부 명세 (통합 PDF 문서 내 수록)", fileName: "safety_guide.pdf" }
     ];
 
     // 📊 PDF 내의 데이터를 완벽 가공한 팀별 통계 데이터 저장소
@@ -144,3 +144,125 @@
             rows: [
                 ["코나", "일상점검", "5대", "178나7958, 296오7056 등"],
                 ["코나 하이브리드", "일상점검", "3대", "281고3858, 281고3882 등"],
+                ["아반떼", "일상점검", "2대", "22부5910, 399더6410"]
+            ],
+            totalRow: ["총 계", "일상점검 총합", "10대", "북부안전팀 차량 운행 정상"],
+            chartType: "doughnut",
+            labels: ["코나", "코나 하이브리드", "아반떼"],
+            counts: [5, 3, 2],
+            colors: ["#0dcaf0", "#0d6efd", "#6c757d"]
+        }
+    };
+
+    let chartInstance = null;
+
+    function getDeptBadgeClass(dept) {
+        if (dept === "안전관리실") return "bg-safety";
+        if (dept === "서부안전팀") return "bg-west";
+        if (dept === "북부안전팀") return "bg-north";
+        return "bg-secondary";
+    }
+
+    // 📋 테이블에 데이터를 꽂아주는 핵심 함수
+    function displayData(dataList) {
+        const tableBody = document.getElementById("dataTableBody");
+        tableBody.innerHTML = "";
+        
+        if (dataList.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999; padding:40px;">🔍 일치하는 자료가 없습니다.</td></tr>`;
+            return;
+        }
+
+        dataList.forEach(item => {
+            const badgeClass = getDeptBadgeClass(item.dept);
+            tableBody.innerHTML += `<tr>
+                <td><span class="badge ${badgeClass}">${item.dept}</span></td>
+                <td><strong>${item.title}</strong></td>
+                <td>${item.content}</td>
+                <td><button class="view-btn" onclick="openPdf('${item.fileName}', '${item.title}')">문서 열기 👁️</button></td>
+            </tr>`;
+        });
+    }
+
+    // 🔍 통합 분석 검색 엔진
+    function searchData() {
+        const selectedDept = document.getElementById("deptSelect").value;
+        const searchKeyword = document.getElementById("searchInput").value.toLowerCase().trim();
+        const reportContainer = document.getElementById("statsReportContainer");
+
+        let activeTeam = null;
+        
+        // 검색 키워드 매칭 판단
+        if (searchKeyword.includes("안전관리") || searchKeyword.includes("교육") || selectedDept === "안전관리실") {
+            activeTeam = "안전관리실";
+        } else if (searchKeyword.includes("서부") || searchKeyword.includes("정압") || selectedDept === "서부안전팀") {
+            activeTeam = "서부안전팀";
+        } else if (searchKeyword.includes("북부") || searchKeyword.includes("차량") || searchKeyword.includes("차") || selectedDept === "북부안전팀") {
+            activeTeam = "북부안전팀";
+        }
+
+        // 통계 리포트 화면 노출 및 차트 드로잉
+        if (activeTeam && teamAnalyticsData[activeTeam] && searchKeyword !== "") {
+            const tData = teamAnalyticsData[activeTeam];
+            reportContainer.style.display = "block";
+            document.getElementById("statsTitle").innerText = tData.title;
+
+            const thBox = document.getElementById("statsTableHead");
+            thBox.innerHTML = `<tr>${tData.headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+            const tbBox = document.getElementById("statsTableBody");
+            tbBox.innerHTML = tData.rows.map(r => `<tr>${r.map(td => `<td>${td}</td>`).join('')}</tr>`).join('');
+            tbBox.innerHTML += `<tr class="highlight-tr">${tData.totalRow.map(td => `<td>${td}</td>`).join('')}</tr>`;
+
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            if (chartInstance) { chartInstance.destroy(); }
+
+            chartInstance = new Chart(ctx, {
+                type: tData.chartType,
+                data: {
+                    labels: tData.labels,
+                    datasets: [{
+                        data: tData.counts,
+                        backgroundColor: tData.colors,
+                        label: '현황 데이터'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: tData.chartType === 'bar' ? 'none' : 'right' } }
+                }
+            });
+        } else {
+            reportContainer.style.display = "none";
+        }
+
+        // 아래쪽 일반 리스트 필터링
+        const filteredData = safetyDatabase.filter(item => {
+            const matchDept = (selectedDept === "all" || item.dept === selectedDept);
+            const matchKeyword = searchKeyword === "" || 
+                                 item.dept.toLowerCase().includes(searchKeyword) || 
+                                 item.title.toLowerCase().includes(searchKeyword) || 
+                                 item.content.toLowerCase().includes(searchKeyword);
+            return matchDept && matchKeyword;
+        });
+        displayData(filteredData);
+    }
+
+    function openPdf(fileName, title) {
+        const container = document.getElementById("pdfViewerContainer");
+        const frame = document.getElementById("pdfFrame");
+        document.getElementById("pdfTitle").innerText = `📄 통합 PDF 문서 열람: ${title}`;
+        frame.src = fileName;
+        container.style.display = "block";
+        container.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ✨ [핵심 조치] 사이트가 최초 로드될 때 리스트를 화면에 즉시 그려주는 트리거 실행
+    window.onload = function() {
+        displayData(safetyDatabase);
+    };
+</script>
+
+</body>
+</html>
